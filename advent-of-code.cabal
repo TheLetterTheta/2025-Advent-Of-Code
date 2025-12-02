@@ -1,0 +1,68 @@
+cabal-version: 3.8
+
+name:           advent-of-code
+version:        0.1.0.0
+description:    Advent of code in Haskell implementation for 2025
+author:         Nick D <nicholas.dolan1@gmail.com>
+license:        BSD-3-Clause
+build-type:     Simple
+extra-source-files:
+    README.md
+
+source-repository head
+  type: git
+  location: https://github.com/lsmor/template-advent-of-code
+
+common deps
+  default-extensions:
+      TypeApplications
+      OverloadedStrings
+      LambdaCase
+      TupleSections
+      StrictData
+      ImportQualifiedPost
+  build-depends:
+      attoparsec
+    , base >=4.7 && <5
+    , bytestring
+    , containers
+    , matrix
+    , vector
+    , split
+    , search-algorithms
+    , mtl
+    , pointedlist
+    , bytestring-trie
+    , integer-logarithms
+    , data-ordlist
+  other-modules:
+      Paths_advent_of_code
+  ghc-options:
+    -Wall
+  default-language: Haskell2010
+
+benchmark day-x-bench
+  import: deps
+  type: exitcode-stdio-1.0
+  hs-source-dirs: bench
+  main-is: bench.hs
+  build-depends:
+    base,
+    criterion,
+    bytestring,
+    advent-of-code
+  ghc-options: -O2 -threaded -rtsopts -with-rtsopts=-N
+
+-- Do not touch after this line. aoc-hs will edit it
+executable day-1
+  import: deps
+  hs-source-dirs:
+      solutions
+  main-is: day-1.hs
+
+executable day-2
+  import: deps
+  hs-source-dirs:
+      solutions
+  main-is: day-2.hs
+
