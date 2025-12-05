@@ -3,9 +3,11 @@ module Main where
 import System.Exit (die)
 import System.Environment (getArgs)
 import Data.ByteString qualified as B
-import Data.List.Ordered
-import Data.Attoparsec.ByteString.Char8 (decimal, sepBy, char, parseOnly, endOfInput, skipSpace, Parser)
-import Math.NumberTheory.Logarithms
+import Data.Char (digitToInt)
+import Data.Attoparsec.ByteString.Char8 (digit, many1, sepBy, parseOnly, endOfLine, endOfInput, skipSpace, Parser)
+import Data.List (scanl', foldl')
+
+-- import Debug.Trace 
 
 {- Types for your input and your solution
 
@@ -13,16 +15,13 @@ import Math.NumberTheory.Logarithms
 - Solution should be the type of your solution. Typically is an Int, but It can be other things, like a list of numbers
          or a list of characters
 -}
-type Input    = [Range]  -- default to Bytestring, but very likely you'll need to change it
-type Solution = Integer
-
-data Range = Range { from :: !Integer, to :: !Integer } deriving (Show)
-
-parseRange :: Parser Range
-parseRange = Range <$> decimal <* char '-' <*> decimal
+type Input    = [[Int]]  -- default to Bytestring, but very likely you'll need to change it
+type Solution = Int
 
 parseInput :: Parser Input
-parseInput = parseRange `sepBy` (char ',') <* skipSpace <* endOfInput
+parseInput = (many1 parseDigitAsInt) `sepBy` endOfLine <* skipSpace <* endOfInput
+  where
+    parseDigitAsInt = digitToInt <$> digit
 
 -- | parser transforms a raw bytestring (from your ./input/day-X.input) to your Input type. 
 --   this is intended to use attoparsec for such a transformation. You can use Prelude's 
@@ -30,44 +29,30 @@ parseInput = parseRange `sepBy` (char ',') <* skipSpace <* endOfInput
 parser :: B.ByteString -> Either String Input
 parser = parseOnly parseInput
 
-
 -- | The function which calculates the solution for part one
-nums :: [Integer]
-nums = [1..]
+computeNewMax :: (Int, Int) -> Int -> (Int, Int)
+-- computeNewMax _ _ (n,i) | trace ("compute max" ++ show n ++ " " ++ show i) False = undefined
+computeNewMax (_, curr_mag) n =
+    (curr_mag * 10 + n, max n curr_mag)
 
-makeDoubled :: Integer -> Integer
-makeDoubled i =
-  i * 10 ^ (1 + integerLog10 i) + i
-
-repeatedNums :: [Integer]
-repeatedNums = map makeDoubled nums
-
-findRange :: [Integer] -> Range -> [Integer]
-findRange list (Range { from = f , to = t }) = 
-  filter (>= f) (takeWhile (<= t) list)
+findMaxNum :: [Int] -> Int
+findMaxNum = maximum . map fst . scanl' computeNewMax (0, 0)
 
 solve1 :: Input -> Solution
-solve1 input =
-  sum $ concatMap (findRange repeatedNums) input
+solve1 = sum . map findMaxNum
 
 -- | The function which calculates the solution for part two
-repeatNum :: Integer -> [Integer]
-repeatNum i = iterate (\x -> x * 10 ^ (1 + integerLog10' i) + i) i
+getHighestBefore :: Int -> [Int] -> [Int]
+getHighestBefore 0 n = [maximum n]
+getHighestBefore n nums = 
+  let
+    highestValue = maximum (take (length nums - n) nums)
+  in
+  highestValue : getHighestBefore (n-1) (drop 1 $ dropWhile (< highestValue) nums)
 
-repeatAll :: [Integer]
-repeatAll =
-  mergeAll $ map (\i -> drop 1 (repeatNum i)) [1 ..]
-
-dedup :: Eq a =>[a] -> [a]
-dedup [] = []
-dedup [x] = [x]
-dedup (x:y:xs)
-  | x == y = dedup (y:xs)
-  | otherwise = x : dedup(y:xs)
 
 solve2 :: Input -> Solution
-solve2 input = 
-  sum $ dedup $ concatMap (findRange repeatAll) input
+solve2 = sum . map (foldl' (\acc n -> acc * 10 + n) 0 .  getHighestBefore 11 )
 
 main :: IO ()
 main = do

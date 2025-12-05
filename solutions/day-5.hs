@@ -4,8 +4,10 @@ import System.Exit (die)
 import System.Environment (getArgs)
 import Data.ByteString qualified as B
 import Data.List.Ordered
-import Data.Attoparsec.ByteString.Char8 (decimal, sepBy, char, parseOnly, endOfInput, skipSpace, Parser)
+import Data.Attoparsec.ByteString.Char8 (decimal, skipWhile, sepBy, endOfLine, char, parseOnly, endOfInput, skipSpace, Parser)
 import Math.NumberTheory.Logarithms
+
+import Debug.Trace
 
 {- Types for your input and your solution
 
@@ -13,16 +15,19 @@ import Math.NumberTheory.Logarithms
 - Solution should be the type of your solution. Typically is an Int, but It can be other things, like a list of numbers
          or a list of characters
 -}
-type Input    = [Range]  -- default to Bytestring, but very likely you'll need to change it
 type Solution = Integer
 
+data Input = Input { ranges :: [Range], fruits :: [Integer] } deriving (Show)
 data Range = Range { from :: !Integer, to :: !Integer } deriving (Show)
 
 parseRange :: Parser Range
 parseRange = Range <$> decimal <* char '-' <*> decimal
 
 parseInput :: Parser Input
-parseInput = parseRange `sepBy` (char ',') <* skipSpace <* endOfInput
+parseInput = do
+  ranges <- (parseRange `sepBy` endOfLine) <* skipSpace
+  fruits <- (decimal `sepBy` endOfLine) <* skipSpace <* endOfInput
+  return Input { ranges = ranges, fruits = fruits }
 
 -- | parser transforms a raw bytestring (from your ./input/day-X.input) to your Input type. 
 --   this is intended to use attoparsec for such a transformation. You can use Prelude's 
@@ -30,44 +35,15 @@ parseInput = parseRange `sepBy` (char ',') <* skipSpace <* endOfInput
 parser :: B.ByteString -> Either String Input
 parser = parseOnly parseInput
 
-
 -- | The function which calculates the solution for part one
-nums :: [Integer]
-nums = [1..]
-
-makeDoubled :: Integer -> Integer
-makeDoubled i =
-  i * 10 ^ (1 + integerLog10 i) + i
-
-repeatedNums :: [Integer]
-repeatedNums = map makeDoubled nums
-
-findRange :: [Integer] -> Range -> [Integer]
-findRange list (Range { from = f , to = t }) = 
-  filter (>= f) (takeWhile (<= t) list)
-
 solve1 :: Input -> Solution
-solve1 input =
-  sum $ concatMap (findRange repeatedNums) input
+solve1 (Input { ranges = r, fruits = f }) =
+  fromIntegral $ length $ filter (\fruit -> any (\(Range { from = fr, to = t }) -> fruit >= fr && fruit <= t ) r) f
 
 -- | The function which calculates the solution for part two
-repeatNum :: Integer -> [Integer]
-repeatNum i = iterate (\x -> x * 10 ^ (1 + integerLog10' i) + i) i
-
-repeatAll :: [Integer]
-repeatAll =
-  mergeAll $ map (\i -> drop 1 (repeatNum i)) [1 ..]
-
-dedup :: Eq a =>[a] -> [a]
-dedup [] = []
-dedup [x] = [x]
-dedup (x:y:xs)
-  | x == y = dedup (y:xs)
-  | otherwise = x : dedup(y:xs)
-
 solve2 :: Input -> Solution
-solve2 input = 
-  sum $ dedup $ concatMap (findRange repeatAll) input
+solve2 (Input { ranges = r, fruits = f}) =
+  sum $ map (\(Range { from = fr, to = t }) -> traceShowId(t - fr) ) r
 
 main :: IO ()
 main = do
@@ -86,4 +62,5 @@ main = do
         else do
           putStrLn "solution to problem 2 is:"
           print $ solve2 input
+
 
