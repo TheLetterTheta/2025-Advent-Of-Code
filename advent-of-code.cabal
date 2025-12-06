@@ -35,6 +35,7 @@ common deps
     , bytestring-trie
     , integer-logarithms
     , data-ordlist
+    , range
   other-modules:
       Paths_advent_of_code
   ghc-options:
