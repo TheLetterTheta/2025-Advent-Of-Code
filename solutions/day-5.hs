@@ -3,12 +3,10 @@ module Main where
 import System.Exit (die)
 import System.Environment (getArgs)
 import Data.ByteString qualified as B
-import Data.List.Ordered
-import Data.Attoparsec.ByteString.Char8 (decimal, skipWhile, sepBy, endOfLine, char, parseOnly, endOfInput, skipSpace, Parser)
-import Math.NumberTheory.Logarithms
+import Data.Attoparsec.ByteString.Char8 (decimal, sepBy, endOfLine, char, parseOnly, endOfInput, skipSpace, Parser)
 import Data.Range qualified as R
 
-import Debug.Trace
+-- import Debug.Trace
 
 {- Types for your input and your solution
 
@@ -21,7 +19,7 @@ type Solution = Integer
 data Input = Input { ranges :: [R.Range Integer], fruits :: [Integer] } deriving (Show)
 
 parseRange :: Parser (R.Range Integer)
-parseRange = (\d1 d2 -> d1 R.+=+ d2) <$> decimal <* char '-' <*> decimal
+parseRange = (R.+=+) <$> decimal <* char '-' <*> decimal
 
 parseInput :: Parser Input
 parseInput = do
@@ -37,18 +35,21 @@ parser = parseOnly parseInput
 
 -- | The function which calculates the solution for part one
 solve1 :: Input -> Solution
-solve1 (Input { ranges = r, fruits = f }) =
-  fromIntegral $ length $ filter (\fruit -> R.inRanges r fruit) f
+solve1 Input { ranges , fruits } =
+  fromIntegral . length $ filter (R.inRanges joinedRanges) fruits
+  where
+    joinedRanges = R.joinRanges ranges
 
 -- | The function which calculates the solution for part two
 sizeOfRange :: R.Range Integer -> Integer
-sizeOfRange (R.SpanRange (R.Bound from _) (R.Bound to _)) = 1 + (to - from)
-sizeOfRange (R.SingletonRange _) = 1
-sizeOfRange _ = 0
+sizeOfRange = \case
+  R.SpanRange (R.Bound from _) (R.Bound to _) -> to - from + 1
+  R.SingletonRange _ -> 1
+  _ -> 0
 
 solve2 :: Input -> Solution
-solve2 (Input { ranges = r, fruits = _}) =
-  sum $ map sizeOfRange $ R.mergeRanges r
+solve2 Input { ranges } =
+  sum . map sizeOfRange $ R.joinRanges ranges
 
 main :: IO ()
 main = do
